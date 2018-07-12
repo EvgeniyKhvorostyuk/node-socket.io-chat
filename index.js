@@ -16,4 +16,19 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log('Disconnected.');
     });
+
+    socket.on('created', (data) => {
+        socket.broadcast.emit('created', (data));
+    });
+
+    socket.on('chat-message', (data) => {
+        socket.broadcast.emit('chat-message', (data));
+    });
+
+    socket.on('typing', (data) => {
+        socket.broadcast.emit('typing', (data));
+    });
+    socket.on('stopTyping', (data) => {
+        socket.broadcast.emit('stopTyping', (data));
+    });
 })
