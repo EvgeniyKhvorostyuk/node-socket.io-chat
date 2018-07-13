@@ -11,15 +11,26 @@
 <body>
     <div class="container">
         <div id="app" class="row">
-            <div class="col-lg-10 offset-1">
-                <div class="card">
+            <div class="col-lg-10 offset-1 mt-5">
+
+                <p v-if="ready" v-for="item in info">
+                    {{item.name}} {{item.type}}
+                </p>
+
+                <div v-if="!ready">
+                    <div class="form-group">
+                        <label for="username">Enter Username</label>
+                        <input id="username" type="text" class="form-control" placeholder="Enter username" v-model="name" @keyup.enter="addName">
+                    </div>
+                </div>
+                <div class="card" v-else>
                     <div class="card-header bg-info">
-                        <h5 class="card-title">Node.js Chat room</h5>
+                        <h5 class="card-title">Node.js Chat room <span class="float-right">{{online}} online</span></h5>
                     </div>
                     <ul class="list-group list-group-flush">
-                        <small v-if="typing">User is typing..</small>
+                        <small v-if="typing">{{typing}} is typing..</small>
                         <li class="list-group-item" v-for="message in messages">
-                            <span :class="{'float-right':message.type === 0}">{{message.message}}</span>
+                            <span :class="{'float-right':message.type === 0}"><small>{{message.user}}: </small>{{message.message}}</span>
                         </li>
                     </ul>
                     <div class="card-body">
@@ -46,11 +57,19 @@
             data: {
                 newMessage: null,
                 messages: [],
-                typing: false
+                typing: false,
+                name: null,
+                ready: false,
+                info: [],
+                connected: 0,
+                online: 0
             },
             watch: {
                 newMessage(value) {
-                    value ? socket.emit('typing') : socket.emit('stopTyping');
+                    value ? socket.emit('typing', this.name) : socket.emit('stopTyping');
+                },
+                connected(value) {
+                    this.online = value - 1;
                 }
             },
             methods: {
@@ -58,25 +77,50 @@
                 send() {
                     // type = 0 - who is sending
                     // type = 1 - who is receiving
-                    this.messages.push({message: this.newMessage, type: 0});
-                    socket.emit('chat-message', this.newMessage);
+                    this.messages.push({message: this.newMessage, type: 0, user: 'me'});
+                    socket.emit('chat-message', {message: this.newMessage, user: this.name});
                     this.newMessage = null;
+                },
+                addName() {
+                    this.ready = true;
+                    socket.emit('joined', this.name);
                 }
             },
             created() {
+                window.onbeforeunload = () => {
+                    socket.emit('leaved', this.name)
+                };
+
                 socket.emit('created', 'Evegnii');
                 socket.on('created', (data) => {});
                 
-                //for the users who is receiving a message
-                socket.on('chat-message', (data) => {
-                    this.messages.push({message: data, type: 1});
+                socket.on('connections', (connections) => {
+                    this.connected = connections;
                 });
 
-                socket.on('typing', () => {
-                    this.typing = true;
+                //for the users who is receiving a message
+                socket.on('chat-message', (data) => {
+                    this.messages.push({message: data.message, type: 1, user: data.user});
+                });
+
+                socket.on('typing', (name) => {
+                    this.typing = name;
                 });
                 socket.on('stopTyping', () => {
                     this.typing = false;
+                });
+
+                socket.on('joined', (data) => {
+                    this.info.push({name: data, type: 'joined'});
+                    setTimeout(() => {
+                        this.info = [];
+                    }, 5000);
+                });
+                socket.on('leaved', (data) => {
+                    this.info.push({name: data, type: 'leaved'});
+                    setTimeout(() => {
+                        this.info = [];
+                    }, 5000);
                 });
             }
         });

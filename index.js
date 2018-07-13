@@ -11,10 +11,12 @@ http.listen(3000, () => {
 });
 
 io.on('connection', (socket) => {
-    console.log('There is a connection');
+
+    io.emit('connections', Object.keys(io.sockets.connected).length);
 
     socket.on('disconnect', () => {
         console.log('Disconnected.');
+        io.emit('connections', Object.keys(io.sockets.connected).length);
     });
 
     socket.on('created', (data) => {
@@ -30,5 +32,12 @@ io.on('connection', (socket) => {
     });
     socket.on('stopTyping', (data) => {
         socket.broadcast.emit('stopTyping', (data));
+    });
+
+    socket.on('joined', (data) => {
+        socket.broadcast.emit('joined', (data));
+    });
+    socket.on('leaved', (data) => {
+        socket.broadcast.emit('leaved', (data));
     });
 })
